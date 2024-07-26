@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <description>Sends a verification email to the User using the Apex Class &apos;SendVerificationEmailAction&apos; which is an InvocableMethod.</description>
+        <name>Send_Verification_Email</name>
+        <label>Send Verification Email</label>
+        <locationX>407</locationX>
+        <locationY>350</locationY>
+        <actionName>SendVerificationEmailAction</actionName>
+        <actionType>apex</actionType>
+        <connector>
+            <targetReference>Action_Requested_Message</targetReference>
+        </connector>
+        <flowTransactionModel>Automatic</flowTransactionModel>
+        <inputParameters>
+            <name>userId</name>
+            <value>
+                <elementReference>LoginFlow_UserId</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>SendVerificationEmailAction</nameSegment>
+        <versionSegment>1</versionSegment>
+    </actionCalls>
+    <apiVersion>61.0</apiVersion>
+    <decisions>
+        <description>Check the Two Factor Registration record after the email to determine if the User Verified Email is set to True or False.</description>
+        <name>Did_User_Click_Email_Verification_Link</name>
+        <label>Did User Click Email Verification Link?</label>
+        <locationX>407</locationX>
+        <locationY>674</locationY>
+        <defaultConnector>
+            <targetReference>Is_Resend_Email_Checked</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>No</defaultConnectorLabel>
+        <rules>
+            <name>Yes</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_Email_Verification_Info.HasUserVerifiedEmailAddress</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>Yes</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>Check the Two Factor Registration record to determine if the User Verified Email is set to True or False.</description>
+        <name>Has_User_Verified_Email_Address</name>
+        <label>Has User Verified Email Address</label>
+        <locationX>176</locationX>
+        <locationY>242</locationY>
+        <defaultConnector>
+            <targetReference>Send_Verification_Email</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Not Verified</defaultConnectorLabel>
+        <rules>
+            <name>Verified</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_Email_Verification_Info.HasUserVerifiedEmailAddress</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>Verified</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>Did the User request that the Verification Email be resent?</description>
+        <name>Is_Resend_Email_Checked</name>
+        <label>Is Resend Email Checked?</label>
+        <locationX>605</locationX>
+        <locationY>782</locationY>
+        <defaultConnector>
+            <isGoTo>true</isGoTo>
+            <targetReference>Action_Requested_Message</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>No</defaultConnectorLabel>
+        <rules>
+            <name>Yes_Resend_Email</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Resend_Email</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <isGoTo>true</isGoTo>
+                <targetReference>Send_Verification_Email</targetReference>
+            </connector>
+            <label>Yes</label>
+        </rules>
+    </decisions>
+    <description>This flow can be set as a Login Flow for Users and will force them to verify their email prior to being able to login.</description>
+    <environments>Default</environments>
+    <interviewLabel>Email Verification Required Login Flow {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Email Verification Required Login Flow</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>Flow</processType>
+    <recordLookups>
+        <description>Get the existing Two Factor Registration record for the User that triggered the Login Flow.</description>
+        <name>Get_Email_Verification_Info</name>
+        <label>Get Email Verification Info</label>
+        <locationX>176</locationX>
+        <locationY>134</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Has_User_Verified_Email_Address</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>UserId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>LoginFlow_UserId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>TwoFactorMethodsInfo</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <description>Get the existing Two Factor Registration record for the User that triggered the Login Flow after the email is sent.</description>
+        <name>Get_Email_Verification_Info_Post_Email</name>
+        <label>Get Email Verification Info Post Email</label>
+        <locationX>407</locationX>
+        <locationY>566</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Did_User_Click_Email_Verification_Link</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>UserId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>LoginFlow_UserId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>TwoFactorMethodsInfo</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <runInMode>SystemModeWithoutSharing</runInMode>
+    <screens>
+        <name>Action_Requested_Message</name>
+        <label>Action Requested Message</label>
+        <locationX>407</locationX>
+        <locationY>458</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <connector>
+            <targetReference>Get_Email_Verification_Info_Post_Email</targetReference>
+        </connector>
+        <fields>
+            <name>ActionRequestedDisplayText</name>
+            <fieldText>&lt;p&gt;&lt;strong&gt;We have identified that the email related to your User in Salesforce has not been verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(250, 5, 5);&quot;&gt;﻿You cannot login until your email is verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;u&gt;DIRECTIONS TO VERIFY EMAIL&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You will be sent an email from Salesforce to verify your email address related to your user.&lt;/li&gt;&lt;li&gt;Click the link in the email from Salesforce.&lt;/li&gt;&lt;li&gt;Then you can click the &apos;Email Verified&apos; button to login to Salesforce.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;***If you do not receive the Verification Email from Salesforce within 5 minutes please check the &apos;Resend Email&apos; box and click Email Verified.&lt;/p&gt;&lt;p&gt;***If you have resent the email and are still not receiving the Verification Email please open a ticket via email to salesforceinternalsupport@orion.com&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>Resend_Email</name>
+            <dataType>Boolean</dataType>
+            <fieldText>Resend Email</fieldText>
+            <fieldType>InputField</fieldType>
+            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+            <isRequired>true</isRequired>
+        </fields>
+        <nextOrFinishButtonLabel>Email Verified</nextOrFinishButtonLabel>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Email_Verification_Info</targetReference>
+        </connector>
+    </start>
+    <status>Draft</status>
+    <variables>
+        <name>LoginFlow_UserId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>
