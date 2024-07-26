@@ -1,4 +1,6 @@
-# DISCLAIMER: I did not come up with this solution I only implented it. Credit goes to GitHub User surajp and their article found here "https://medium.com/@Suraj_Pillai/using-flows-to-verify-emails-in-salesforce-a25858be5f25".
+# DISCLAIMER: I did not come up with this solution I only implented it.
+## Credit goes to GitHub User surajp
+## Article found here https://medium.com/@Suraj_Pillai/using-flows-to-verify-emails-in-salesforce-a25858be5f25
 
 During the Spring’22 release, Salesforce reiterated the need for users to verify their email addresses to be able to send emails from within their orgs. This includes any automated emails that are sent as the current user. Reason being that there are users in older orgs whose emails were verified using the previous generation of Salesforce’s email verification method who are now considered “unverified” according to their current email verification method. There’s also SSO users who may have never verified their emails. As of Winter’23, Salesforce plans to prevent users whose emails have not been verified with their current verification method from sending emails. To remind users to verify their emails, Salesforce had also announced that they would be sending them verification requests once in Spring’22 and again in Summer’22 when an unverified user tries to send an email.
 
