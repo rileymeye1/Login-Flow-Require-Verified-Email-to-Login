@@ -21,7 +21,7 @@
         <nameSegment>SendVerificationEmailAction</nameSegment>
         <versionSegment>1</versionSegment>
     </actionCalls>
-    <apiVersion>61.0</apiVersion>
+    <apiVersion>67.0</apiVersion>
     <decisions>
         <description>Check the Two Factor Registration record after the email to determine if the User Verified Email is set to True or False.</description>
         <name>Did_User_Click_Email_Verification_Link</name>
@@ -177,7 +177,7 @@
         </connector>
         <fields>
             <name>ActionRequestedDisplayText</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;We have identified that the email related to your User in Salesforce has not been verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(250, 5, 5);&quot;&gt;﻿You cannot login until your email is verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;u&gt;DIRECTIONS TO VERIFY EMAIL&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You will be sent an email from Salesforce to verify your email address related to your user.&lt;/li&gt;&lt;li&gt;Click the link in the email from Salesforce.&lt;/li&gt;&lt;li&gt;Then you can click the &apos;Email Verified&apos; button to login to Salesforce.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;***If you do not receive the Verification Email from Salesforce within 5 minutes please check the &apos;Resend Email&apos; box and click Email Verified.&lt;/p&gt;&lt;p&gt;***If you have resent the email and are still not receiving the Verification Email please open a ticket via email to salesforceinternalsupport@orion.com&lt;/p&gt;</fieldText>
+            <fieldText>&lt;p&gt;&lt;strong&gt;We have identified that the email related to your User in Salesforce has not been verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(250, 5, 5);&quot;&gt;﻿You cannot login until your email is verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;u&gt;DIRECTIONS TO VERIFY EMAIL&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You will be sent an email from Salesforce to verify your email address related to your user.&lt;/li&gt;&lt;li&gt;Click the link in the email from Salesforce.&lt;/li&gt;&lt;li&gt;Then you can click the &apos;Email Verified&apos; button to login to Salesforce.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;***If you do not receive the Verification Email from Salesforce within 5 minutes please check the &apos;Resend Email&apos; box and click Email Verified.&lt;/p&gt;&lt;p&gt;***If you have resent the email and are still not receiving the Verification Email please reach out to your Salesforce team for assistance.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
         </fields>
         <fields>
@@ -199,7 +199,7 @@
             <targetReference>Get_Email_Verification_Info</targetReference>
         </connector>
     </start>
-    <status>Draft</status>
+    <status>Active</status>
     <variables>
         <name>LoginFlow_UserId</name>
         <dataType>String</dataType>
