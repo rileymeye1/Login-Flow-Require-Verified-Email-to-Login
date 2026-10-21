@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>ONLY ASSIGN TO SYSTEM ADMINS</description>
+    <description>Grants ManageTwoFactor (requires ManageUsers) to read TwoFactorMethodsInfo for the Email Verification Required Login Flow. The user deploying the flow must hold it. ONLY assign to System Administrators and Developers.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Manage Multi-Factor Logins</label>
     <userPermissions>
