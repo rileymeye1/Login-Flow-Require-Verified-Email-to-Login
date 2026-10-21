@@ -32,8 +32,23 @@ verification reminders.
    pointing at `Email_Verification_Required_Login_Flow`.
    - Leave **Render Flow in Lightning Runtime** unchecked. See [Gotchas](#gotchas-read-before-changing-anything).
    - Login Flow assignments are not deployable metadata; this step is always manual.
-   - Test on a cloned profile first, and never assign it to your own admin profile until it works.
+   - Roll out to a cloned pilot profile with test users first, then to the remaining profiles. Never
+     start with your own System Administrator profile.
 5. Test with a real login (see [Testing](#testing)).
+
+### Kill switch
+
+Delete the Login Flow assignment for the profile (Setup > Identity > Login Flows). It takes effect on
+the next login, with no deploy. Deactivating the flow also works, but affects every assigned profile.
+
+### Deploying through CI
+
+The flow deploy fails unless the user running it already holds `ManageTwoFactor`, and assigning the
+permission set in the same deploy does not help. If your pipeline deploys the whole project as a user
+without it, list the flow in `.forceignore` and deploy it separately with steps 1-3. An explicit
+`-m Flow:...` deploy does not get past `.forceignore`, so comment the line out for that deploy, confirm
+that the output lists the flow, and restore the line. The permission set and Apex can deploy through
+CI as normal.
 
 ## How it works
 
@@ -49,8 +64,6 @@ verification reminders.
    checked and show the screen again.
 6. At 3 failed attempts, show a message, set `LoginFlow_ForceLogout = true`, and move to the
    `Logging_Out` screen, which logs the user out. Logging in again starts over with a new email.
-
-A user with no `TwoFactorMethodsInfo` record is treated as unverified (fail closed).
 
 ### Login Flow variables used
 
@@ -125,8 +138,30 @@ Each of these was hit while building this. The flow looks the way it does on pur
 - With SSO, logging out after 3 attempts usually logs the user straight back in through the identity
   provider, which starts the flow again with a new email. That is expected.
 
-Not yet tested end to end: the logout for internal (non-site) logins, and a user with no
-`TwoFactorMethodsInfo` record.
+Expected behavior:
+
+| Scenario                                           | Expected                                      |
+| -------------------------------------------------- | --------------------------------------------- |
+| Verified user logs in                              | No screen; straight in                        |
+| Unverified internal user                           | Internal screen; email arrives                |
+| Unverified site user                               | Community screen; link opens on the site      |
+| Click the link, then **Email Verified**            | Logged in, same session                       |
+| **Resend Email** checked, then **Email Verified**  | A new email arrives; the screen shows again   |
+| **Email Verified** 3 times without clicking a link | Logout message; **Log Out** logs the user out |
+
+Not yet tested end to end: the logout for internal (non-site) logins.
+
+## Troubleshooting
+
+| Symptom                                                                          | Cause / fix                                                                 |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Deploy: `The field "UserId" for the object "TwoFactorMethodsInfo" doesn't exist` | The deploying user lacks `Manage_Multi_Factor_Logins`; deploy and assign it |
+| SOQL: `sObject type 'TwoFactorMethodsInfo' is not supported`                     | Same: the querying user lacks `Manage_Multi_Factor_Logins`                  |
+| Permission set deploy: `data value too large` on Description                     | Permission set descriptions are limited to 255 characters                   |
+| "We can't display the ... field" at login                                        | A conditional visibility rule was added; see Gotcha 2                       |
+| User reaches the org after 3 failed attempts                                     | `Logging_Out` was removed or bypassed; see Gotchas 3 and 4                  |
+| **Email Verified** never works without logging in again                          | The post-email decision reads the wrong lookup; see Gotcha 5                |
+| Users can skip the flow                                                          | Lightning runtime was enabled on the Login Flow assignment; see Gotcha 1    |
 
 ## Background (from the original article)
 

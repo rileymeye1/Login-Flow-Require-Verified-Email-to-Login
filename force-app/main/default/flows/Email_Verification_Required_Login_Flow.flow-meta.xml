@@ -424,7 +424,7 @@
     </start>
     <status>Active</status>
     <variables>
-        <description>Increased each time the user clicks &quot;Email Verified&quot; and is still unverified (including when there&apos;s no record)</description>
+        <description>Increased each time the user clicks &quot;Email Verified&quot; and is still unverified</description>
         <name>attemptCount</name>
         <dataType>Number</dataType>
         <isCollection>false</isCollection>
