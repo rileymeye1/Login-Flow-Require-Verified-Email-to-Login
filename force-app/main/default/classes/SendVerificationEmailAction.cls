@@ -15,7 +15,8 @@ public class SendVerificationEmailAction {
      * user's site itself, and lands the user on the org or site home page. When networkId is
      * blank but communityUrl is set (a Login Flow passes LoginFlow_Community), the Experience
      * Cloud site is resolved from that URL so the email always targets the site the user is
-     * logging in to, even if they belong to more than one site.
+     * logging in to, even if they belong to more than one site. Null inputs and inputs without a
+     * userId are skipped.
      * @param inputs One entry per user who should receive a verification email.
      */
     @InvocableMethod(
@@ -24,11 +25,17 @@ public class SendVerificationEmailAction {
         description='Send Emails to users to verify their email address'
     )
     public static void sendEmail(List<FlowInput> inputs) {
+        if (inputs == null || inputs.isEmpty()) {
+            return;
+        }
         Map<Id, String> siteUrlByNetworkId = needsSiteLookup(inputs)
             ? getLiveSiteUrlsByNetworkId()
             : new Map<Id, String>();
 
         for (FlowInput inp : inputs) {
+            if (inp == null || inp.userId == null) {
+                continue;
+            }
             Id networkId = inp.networkId != null
                 ? inp.networkId
                 : resolveNetworkId(inp.communityUrl, siteUrlByNetworkId);
@@ -81,7 +88,7 @@ public class SendVerificationEmailAction {
 
     private static Boolean needsSiteLookup(List<FlowInput> inputs) {
         for (FlowInput inp : inputs) {
-            if (inp.networkId == null && String.isNotBlank(inp.communityUrl)) {
+            if (inp != null && inp.networkId == null && String.isNotBlank(inp.communityUrl)) {
                 return true;
             }
         }

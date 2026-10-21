@@ -90,6 +90,28 @@ private class SendVerificationEmailActionTest {
     }
 
     @IsTest
+    static void sendEmailShouldSkipNullInputsAndInputsWithoutUserId() {
+        SendVerificationEmailAction.FlowInput withoutUserId = buildInput(null);
+        withoutUserId.communityUrl = 'https://example.my.site.com';
+        List<SendVerificationEmailAction.FlowInput> inputs = new List<SendVerificationEmailAction.FlowInput>{
+            null,
+            withoutUserId
+        };
+
+        Exception caught;
+        Test.startTest();
+        try {
+            SendVerificationEmailAction.sendEmail(null);
+            SendVerificationEmailAction.sendEmail(inputs);
+        } catch (Exception e) {
+            caught = e;
+        }
+        Test.stopTest();
+
+        Assert.isNull(caught, 'Null input lists, null inputs and inputs without a userId should be skipped: ' + caught);
+    }
+
+    @IsTest
     static void sendEmailShouldNotThrowWhenCommunityUrlIsSet() {
         List<User> users = [SELECT Id FROM User WHERE LastName = :TEST_LAST_NAME LIMIT 1];
         SendVerificationEmailAction.FlowInput input = buildInput(users[0].Id);
