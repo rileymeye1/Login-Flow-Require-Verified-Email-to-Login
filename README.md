@@ -1,33 +1,130 @@
-# DISCLAIMER: I did not come up with this solution I only implented it.
-## Credit goes to GitHub User @surajp (https://www.github.com/surajp)
-## Article found here https://medium.com/@Suraj_Pillai/using-flows-to-verify-emails-in-salesforce-a25858be5f25
+# Login Flow: Require a Verified Email to Log In
 
-Steps To Implement In Your Org
-1. Deploy Apex Class
-2. Deploy Apex Test Class
-3. Deploy Permission Set
-4. Assign Permission Set to your User. (Without the Permission Set you cannot deploy the Flow because you need access to the TwoFactorMethods Object.)
-5. Deploy the Flow
-6. Set the Flow as a Login Flow (Setup > Quick Find > Identity > Login Flows)
-7. Test with a User
-8. ENJOY!
+> **Disclaimer:** I did not come up with the original solution, I only implemented and extended it.
+> Credit goes to GitHub user [@surajp](https://www.github.com/surajp).
+> Original article: [Using Flows to Verify Emails in Salesforce](https://medium.com/@Suraj_Pillai/using-flows-to-verify-emails-in-salesforce-a25858be5f25)
 
+A Salesforce Login Flow that stops users from logging in until their email address is verified. Once a
+user is verified they are never prompted again. It works for internal users and for Experience Cloud
+(site) users, including users who log in through SAML SSO and so never get Salesforce's own
+verification reminders.
 
-During the Spring’22 release, Salesforce reiterated the need for users to verify their email addresses to be able to send emails from within their orgs. This includes any automated emails that are sent as the current user. Reason being that there are users in older orgs whose emails were verified using the previous generation of Salesforce’s email verification method who are now considered “unverified” according to their current email verification method. There’s also SSO users who may have never verified their emails. As of Winter’23, Salesforce plans to prevent users whose emails have not been verified with their current verification method from sending emails. To remind users to verify their emails, Salesforce had also announced that they would be sending them verification requests once in Spring’22 and again in Summer’22 when an unverified user tries to send an email.
+## What's in the repo
 
-As for SSO users, Salesforce does not have any plans of sending them reminder emails at this time. These users,too, are unable to send emails from Salesforce until they verify their emails and any automated processes sending emails as them fails silently.
+| Component                                | Purpose                                                                          |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| `SendVerificationEmailAction`            | Invocable Apex wrapper around `System.UserManagement.sendAsyncEmailConfirmation` |
+| `SendVerificationEmailActionTest`        | Tests for the action                                                             |
+| `Email_Verification_Required_Login_Flow` | The Login Flow (Screen Flow, runs in system mode without sharing)                |
+| `Manage_Multi_Factor_Logins`             | Permission set the **deploying** user needs (see Setup)                          |
 
-Fortunately, there is a simple solution to this problem that also serves to nicely illustrate the combined power of Flows and Apex. For best results, the Flow should be configured as a Login Flow that doesn’t let the user proceed till they verify their email.
+## Setup
 
-Salesforce Login Flow to verify user emails
-The process starts by querying the TwoFactorMethodsInfo object for the user in question. (Note: The running user needs Manage Multi-Factor Logins permission to see this object, which shouldn’t matter during actual runs since the Flow needs to be configured to run in System mode. However, during development and debugging you may find yourself needing this permission). If you do decide to make this a login flow, define an input variable called LoginFlow_UserId which automatically gets set to the current user’s Id. (For additional Login Flow variables, refer to this page.)
+1. Deploy the permission set: `sf project deploy start -d force-app/main/default/permissionsets`
+2. Assign it to the user who will deploy the flow:
+   `sf org assign permset -n Manage_Multi_Factor_Logins`
+   Without it the flow deploy fails with
+   `The field "UserId" for the object "TwoFactorMethodsInfo" doesn't exist.`
+3. Deploy the Apex classes and the flow:
+   `sf project deploy start -d force-app/main/default/classes -d force-app/main/default/flows`
+4. In Setup > Identity > Login Flows, add a Login Flow per profile (internal and/or site profiles)
+   pointing at `Email_Verification_Required_Login_Flow`.
+   - Leave **Render Flow in Lightning Runtime** unchecked. See [Gotchas](#gotchas-read-before-changing-anything).
+   - Login Flow assignments are not deployable metadata; this step is always manual.
+   - Test on a cloned profile first, and never assign it to your own admin profile until it works.
+5. Test with a real login (see [Testing](#testing)).
 
-Get TwoFactorMethodsInfo records for current user
-Next we check to see if the HasUserVerifiedEmailAdress field is set to true on the TwofactorMethodInfo record for this user. If not, the user hasn’t verified their email. We then use an Invocable Action to send a verification email to them and show them a message requesting that they click the link in the email before moving ahead in the Flow. The action is quite barebones and is merely a bulkified wrapper around the UserManagement.sendAsyncEmailConfirmation method.
+## How it works
 
-Invocable action to send verification email
-EmailTemplateId is optional, and if left null, Salesforce sends the standard verification email. NetworkId should be null for internal users and should be the relevant Community Id for external users. landingPageUrl may be left blank as well as the user will be redirected to the Org/Site Home Page once they complete the Login Flow.
+1. Look up the user's `TwoFactorMethodsInfo` record. If `HasUserVerifiedEmailAddress` is true, the flow
+   ends and the user logs in.
+2. Otherwise send a verification email through `SendVerificationEmailAction`, passing
+   `LoginFlow_UserId` and `LoginFlow_Community`.
+3. A decision on `LoginFlow_Community` (blank = internal, set = site) picks the internal or the
+   community screen. The community wording does not mention Salesforce.
+4. When the user clicks **Email Verified**, look the record up again. If verified, the flow ends and
+   the user logs in.
+5. If still unverified, increase `attemptCount`. Below 3, resend the email if **Resend Email** was
+   checked and show the screen again.
+6. At 3 failed attempts, show a message, set `LoginFlow_ForceLogout = true`, and move to the
+   `Logging_Out` screen, which logs the user out. Logging in again starts over with a new email.
 
-When the user proceeds from this screen, we query the TwoFactorMethodInfo object again to check if their email is now verified. If it still isn’t we go back to the screen requesting them to click the link. They can optionally choose to have the email resent.
+A user with no `TwoFactorMethodsInfo` record is treated as unverified (fail closed).
 
-As stated earlier, for best results, configure this as a Login Flow running in the System context (since the user logging in may not have access to the TwoFactorMethodsInfo object). Doing so will ensure all users in your org have emails verified with Salesforce’s new verification method. Orgs not using SSO can turn this Flow off after a reasonable amount of time as new users will always have verified emails. For orgs using SSO, I’d recommend keeping this Login Flow in place to ensure their users’ emails are always verified.
+### Login Flow variables used
+
+| Variable                | Direction        | Value seen in testing                                                        |
+| ----------------------- | ---------------- | ---------------------------------------------------------------------------- |
+| `LoginFlow_UserId`      | Input            | The logging-in user's Id                                                     |
+| `LoginFlow_Community`   | Input            | Site base URL, e.g. `https://example.my.site.com`. Blank for internal logins |
+| `LoginFlow_ForceLogout` | Output (Boolean) | Set to `true` to log the user out                                            |
+
+### The Apex action
+
+Inputs: `userId` (required), and optional `emailTemplateId`, `networkId`, `landingPageUrl` and
+`communityUrl`. Null optional inputs mean the default Salesforce verification email and landing page.
+
+When `networkId` is blank and `communityUrl` is set, the action finds the site by comparing each live
+site's `Network.getLoginUrl()`, minus `/login`, with `communityUrl` (case-insensitive, trailing `/`
+ignored). It queries `Network` once per call. If nothing matches, `networkId` stays null.
+
+## Gotchas (read before changing anything)
+
+Each of these was hit while building this. The flow looks the way it does on purpose.
+
+1. **Do not enable "Render Flow in Lightning Runtime".** Salesforce warns that in Lightning runtime
+   users can access Salesforce before finishing the Login Flow, which defeats the purpose. The flow
+   must run in Classic runtime.
+2. **No conditional field visibility.** Classic runtime cannot render it ("We can't display the
+   '...' field, because it uses conditional field visibility rules..."). That is why there are two
+   screens chosen by the `Is_the_User_a_Community_User` decision instead of one screen with
+   show/hide rules. Decisions also offer _Is Blank_, which visibility rules do not.
+3. **`LoginFlow_ForceLogout` is only checked when the flow moves to a screen.** Setting it and then
+   going to End is ignored and the user is logged in. `LoginFlow_FinishLocation` (for example a
+   `/secur/logout.jsp` redirect) was ignored as well, at least for SAML SSO site logins. The
+   `Logging_Out` screen exists only so the flow moves to a screen after the assignment. Users never
+   see it.
+4. **`Logging_Out` must keep its footer hidden.** If the logout ever fails, the user is left on that
+   screen with nothing to click, so the flow cannot finish and log them in. Flow Builder won't let
+   both Finish and Back be disabled ("You can set either allowFinish or allowBack to false, but not
+   both"), so hide the footer instead of removing the button.
+5. **The post-email decision must read `Get_Email_Verification_Info_Post_Email`.** The original flow
+   read the first lookup, so clicking **Email Verified** could never succeed in the same session and
+   users had to log in again.
+6. **Increase `attemptCount` before checking it, and start it at 0.** Checking first gives the user 4
+   tries instead of 3.
+7. **The Resend Email checkboxes use "Refresh inputs" (`ResetValues`).** With stored values the box
+   stays checked when the screen comes back and resends on every click.
+8. **`LoginFlow_Community` is a URL, not a Network Id.** That is why the Apex action matches URLs.
+   For users who belong to a single site, Salesforce already builds the verification link on that
+   site when `networkId` is null. Passing `communityUrl` makes it correct for users in several sites.
+9. **The permission set is already minimal.** `TwoFactorMethodsInfo` needs `ManageTwoFactor`
+   (labelled "Manage MFA in API"), which depends on `ManageUsers`, which pulls in the other 15
+   permissions. Removing any of them makes the deploy fail. The flow itself runs in system mode, so
+   end users do not need this permission set.
+
+## Testing
+
+- "Log in as" a user does **not** run Login Flows. Use a real login (username/password or SSO) to the
+  internal org or to the site URL.
+- To get a fresh unverified user, create one with your own email address. New users get a
+  `TwoFactorMethodsInfo` record with `HasUserVerifiedEmailAddress = false` as soon as they are
+  created.
+- Check a user's status (needs `Manage_Multi_Factor_Logins`):
+  `SELECT Id, UserId, HasUserVerifiedEmailAddress FROM TwoFactorMethodsInfo WHERE UserId = '<user Id>'`
+- To see what the flow did, add a trace flag on the test user with Workflow logging at FINEST. The
+  Login Flow appears as `/loginflow/loginFlow.apexp` requests.
+- With SSO, logging out after 3 attempts usually logs the user straight back in through the identity
+  provider, which starts the flow again with a new email. That is expected.
+
+Not yet tested end to end: the logout for internal (non-site) logins, and a user with no
+`TwoFactorMethodsInfo` record.
+
+## Background (from the original article)
+
+During the Spring '22 release, Salesforce reiterated the need for users to verify their email
+addresses to be able to send emails from within their orgs, including automated emails sent as the
+current user. Users in older orgs whose emails were verified with the previous verification method are
+now considered unverified, and SSO users may never have verified their emails at all. Unverified users
+cannot send email from Salesforce, and automated processes sending email as them fail silently.
+Salesforce does not send SSO users verification reminders, which is why this Login Flow exists.
