@@ -135,8 +135,6 @@ Each of these was hit while building this. The flow looks the way it does on pur
   `SELECT Id, UserId, HasUserVerifiedEmailAddress FROM TwoFactorMethodsInfo WHERE UserId = '<user Id>'`
 - To see what the flow did, add a trace flag on the test user with Workflow logging at FINEST. The
   Login Flow appears as `/loginflow/loginFlow.apexp` requests.
-- With SSO, logging out after 3 attempts usually logs the user straight back in through the identity
-  provider, which starts the flow again with a new email. That is expected.
 
 Expected behavior:
 
