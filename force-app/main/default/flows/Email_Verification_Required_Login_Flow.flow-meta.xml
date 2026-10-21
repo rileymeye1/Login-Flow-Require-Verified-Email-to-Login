@@ -4,14 +4,20 @@
         <description>Sends a verification email to the User using the Apex Class &apos;SendVerificationEmailAction&apos; which is an InvocableMethod.</description>
         <name>Send_Verification_Email</name>
         <label>Send Verification Email</label>
-        <locationX>407</locationX>
-        <locationY>350</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <actionName>SendVerificationEmailAction</actionName>
         <actionType>apex</actionType>
         <connector>
-            <targetReference>Action_Requested_Message</targetReference>
+            <targetReference>Is_the_User_a_Community_User</targetReference>
         </connector>
         <flowTransactionModel>Automatic</flowTransactionModel>
+        <inputParameters>
+            <name>communityUrl</name>
+            <value>
+                <elementReference>LoginFlow_Community</elementReference>
+            </value>
+        </inputParameters>
         <inputParameters>
             <name>userId</name>
             <value>
@@ -19,24 +25,71 @@
             </value>
         </inputParameters>
         <nameSegment>SendVerificationEmailAction</nameSegment>
-        <versionSegment>1</versionSegment>
+        <offset>0</offset>
     </actionCalls>
     <apiVersion>67.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Increase_Attempt_Count</name>
+        <label>Increase Attempt Count</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>attemptCount</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>attemptCountIncrease</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Max_Attempts</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Set_Force_Logout_to_True</name>
+        <label>Set Force Logout to True</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>LoginFlow_ForceLogout</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Logging_Out</targetReference>
+        </connector>
+    </assignments>
+    <constants>
+        <name>attemptCountIncrease</name>
+        <dataType>Number</dataType>
+        <value>
+            <numberValue>1.0</numberValue>
+        </value>
+    </constants>
+    <constants>
+        <name>maxAttempts</name>
+        <dataType>Number</dataType>
+        <value>
+            <numberValue>3.0</numberValue>
+        </value>
+    </constants>
     <decisions>
         <description>Check the Two Factor Registration record after the email to determine if the User Verified Email is set to True or False.</description>
         <name>Did_User_Click_Email_Verification_Link</name>
         <label>Did User Click Email Verification Link?</label>
-        <locationX>407</locationX>
-        <locationY>674</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <defaultConnector>
-            <targetReference>Is_Resend_Email_Checked</targetReference>
+            <targetReference>Increase_Attempt_Count</targetReference>
         </defaultConnector>
         <defaultConnectorLabel>No</defaultConnectorLabel>
         <rules>
             <name>Yes</name>
             <conditionLogic>and</conditionLogic>
             <conditions>
-                <leftValueReference>Get_Email_Verification_Info.HasUserVerifiedEmailAddress</leftValueReference>
+                <leftValueReference>Get_Email_Verification_Info_Post_Email.HasUserVerifiedEmailAddress</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
                     <booleanValue>true</booleanValue>
@@ -49,8 +102,8 @@
         <description>Check the Two Factor Registration record to determine if the User Verified Email is set to True or False.</description>
         <name>Has_User_Verified_Email_Address</name>
         <label>Has User Verified Email Address</label>
-        <locationX>176</locationX>
-        <locationY>242</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <defaultConnector>
             <targetReference>Send_Verification_Email</targetReference>
         </defaultConnector>
@@ -72,18 +125,25 @@
         <description>Did the User request that the Verification Email be resent?</description>
         <name>Is_Resend_Email_Checked</name>
         <label>Is Resend Email Checked?</label>
-        <locationX>605</locationX>
-        <locationY>782</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <defaultConnector>
             <isGoTo>true</isGoTo>
-            <targetReference>Action_Requested_Message</targetReference>
+            <targetReference>Is_the_User_a_Community_User</targetReference>
         </defaultConnector>
         <defaultConnectorLabel>No</defaultConnectorLabel>
         <rules>
             <name>Yes_Resend_Email</name>
-            <conditionLogic>and</conditionLogic>
+            <conditionLogic>or</conditionLogic>
             <conditions>
-                <leftValueReference>Resend_Email</leftValueReference>
+                <leftValueReference>Resend_Email_Internal</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Resend_Email_Community</leftValueReference>
                 <operator>EqualTo</operator>
                 <rightValue>
                     <booleanValue>true</booleanValue>
@@ -94,6 +154,56 @@
                 <targetReference>Send_Verification_Email</targetReference>
             </connector>
             <label>Yes</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_the_User_a_Community_User</name>
+        <label>Is the User a Community User?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>Action_Requested_Message_Internal</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Internal User</defaultConnectorLabel>
+        <rules>
+            <name>Community_User</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>LoginFlow_Community</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Action_Requested_Message_Community</targetReference>
+            </connector>
+            <label>Community User</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Max_Attempts</name>
+        <label>Max Attempts?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>Is_Resend_Email_Checked</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Max Attempts Not Reached</defaultConnectorLabel>
+        <rules>
+            <name>Max_Attempts_Reached</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>attemptCount</leftValueReference>
+                <operator>GreaterThanOrEqualTo</operator>
+                <rightValue>
+                    <elementReference>maxAttempts</elementReference>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Max_Attempts_Log_Out_Screen</targetReference>
+            </connector>
+            <label>Max Attempts Reached</label>
         </rules>
     </decisions>
     <description>This flow can be set as a Login Flow for Users and will force them to verify their email prior to being able to login.</description>
@@ -123,8 +233,8 @@
         <description>Get the existing Two Factor Registration record for the User that triggered the Login Flow.</description>
         <name>Get_Email_Verification_Info</name>
         <label>Get Email Verification Info</label>
-        <locationX>176</locationX>
-        <locationY>134</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
             <targetReference>Has_User_Verified_Email_Address</targetReference>
@@ -145,8 +255,8 @@
         <description>Get the existing Two Factor Registration record for the User that triggered the Login Flow after the email is sent.</description>
         <name>Get_Email_Verification_Info_Post_Email</name>
         <label>Get Email Verification Info Post Email</label>
-        <locationX>407</locationX>
-        <locationY>566</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
             <targetReference>Did_User_Click_Email_Verification_Link</targetReference>
@@ -165,10 +275,10 @@
     </recordLookups>
     <runInMode>SystemModeWithoutSharing</runInMode>
     <screens>
-        <name>Action_Requested_Message</name>
+        <name>Action_Requested_Message_Community</name>
         <label>Action Requested Message</label>
-        <locationX>407</locationX>
-        <locationY>458</locationY>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
         <allowBack>false</allowBack>
         <allowFinish>true</allowFinish>
         <allowPause>false</allowPause>
@@ -176,24 +286,137 @@
             <targetReference>Get_Email_Verification_Info_Post_Email</targetReference>
         </connector>
         <fields>
-            <name>ActionRequestedDisplayText</name>
-            <fieldText>&lt;p&gt;&lt;strong&gt;We have identified that the email related to your User in Salesforce has not been verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(250, 5, 5);&quot;&gt;﻿You cannot login until your email is verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;u&gt;DIRECTIONS TO VERIFY EMAIL&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You will be sent an email from Salesforce to verify your email address related to your user.&lt;/li&gt;&lt;li&gt;Click the link in the email from Salesforce.&lt;/li&gt;&lt;li&gt;Then you can click the &apos;Email Verified&apos; button to login to Salesforce.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;***If you do not receive the Verification Email from Salesforce within 5 minutes please check the &apos;Resend Email&apos; box and click Email Verified.&lt;/p&gt;&lt;p&gt;***If you have resent the email and are still not receiving the Verification Email please reach out to your Salesforce team for assistance.&lt;/p&gt;</fieldText>
+            <name>ActionRequestedDisplayTextCommunity</name>
+            <fieldText>&lt;p&gt;&lt;strong&gt;We have identified that the email related to your user has not been verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(250, 5, 5);&quot;&gt;﻿You cannot log in until your email is verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;u&gt;DIRECTIONS TO VERIFY EMAIL&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You will be sent an email with a link to verify your email address related to your user.&lt;/li&gt;&lt;li&gt;Click the link in the email.&lt;/li&gt;&lt;li&gt;Then you can click the &apos;Email Verified&apos; button to log in.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;***If you do not receive the Verification Email within 5 minutes please check the &apos;Resend Email&apos; box and click Email Verified.&lt;/p&gt;&lt;p&gt;***If you have resent the email and are still not receiving the Verification Email please reach out to your support team for assistance.&lt;/p&gt;</fieldText>
             <fieldType>DisplayText</fieldType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
         </fields>
         <fields>
-            <name>Resend_Email</name>
+            <name>Resend_Email_Community</name>
             <dataType>Boolean</dataType>
             <fieldText>Resend Email</fieldText>
             <fieldType>InputField</fieldType>
-            <inputsOnNextNavToAssocScrn>UseStoredValues</inputsOnNextNavToAssocScrn>
+            <inputsOnNextNavToAssocScrn>ResetValues</inputsOnNextNavToAssocScrn>
             <isRequired>true</isRequired>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
         </fields>
         <nextOrFinishButtonLabel>Email Verified</nextOrFinishButtonLabel>
         <showFooter>true</showFooter>
         <showHeader>false</showHeader>
     </screens>
+    <screens>
+        <name>Action_Requested_Message_Internal</name>
+        <label>Action Requested Message</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <connector>
+            <targetReference>Get_Email_Verification_Info_Post_Email</targetReference>
+        </connector>
+        <fields>
+            <name>ActionRequestedDisplayTextInternal</name>
+            <fieldText>&lt;p&gt;&lt;strong&gt;We have identified that the email related to your user in Salesforce has not been verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(250, 5, 5);&quot;&gt;﻿You cannot log in until your email is verified.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;u&gt;DIRECTIONS TO VERIFY EMAIL&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You will be sent an email from Salesforce to verify your email address related to your user.&lt;/li&gt;&lt;li&gt;Click the link in the email from Salesforce.&lt;/li&gt;&lt;li&gt;Then you can click the &apos;Email Verified&apos; button to log in to Salesforce.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;***If you do not receive the Verification Email from Salesforce within 5 minutes please check the &apos;Resend Email&apos; box and click Email Verified.&lt;/p&gt;&lt;p&gt;***If you have resent the email and are still not receiving the Verification Email please reach out to your Salesforce team for assistance.&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <fields>
+            <name>Resend_Email_Internal</name>
+            <dataType>Boolean</dataType>
+            <fieldText>Resend Email</fieldText>
+            <fieldType>InputField</fieldType>
+            <inputsOnNextNavToAssocScrn>ResetValues</inputsOnNextNavToAssocScrn>
+            <isRequired>true</isRequired>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <nextOrFinishButtonLabel>Email Verified</nextOrFinishButtonLabel>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <screens>
+        <description>The user should never see this screen, but Salesforce flows don&apos;t evaluate LoginFlow_ForceLogout if the next element is an End element so this screen is needed. Never display the Footer because if this screen displays then the Force Logout failed and we don&apos;t want them to access the system.</description>
+        <name>Logging_Out</name>
+        <label>Logging Out</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>LoggingOutDisplayText</name>
+            <fieldText>&lt;p&gt;Logging you out…&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <showFooter>false</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <screens>
+        <name>Max_Attempts_Log_Out_Screen</name>
+        <label>Max Attempts Log Out Screen</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <connector>
+            <targetReference>Set_Force_Logout_to_True</targetReference>
+        </connector>
+        <fields>
+            <name>MaxAttemptsLogOutScreenDisplayText</name>
+            <fieldText>&lt;p&gt;We were unable to confirm that your email address has been verified, so you will be logged out.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;To try again, log in again and a new verification email will be sent. Click the link in that email before clicking &apos;Email Verified&apos;.&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;If you are not receiving the verification email, please reach out to your support team for assistance.&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <nextOrFinishButtonLabel>Log Out</nextOrFinishButtonLabel>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
     <start>
-        <locationX>50</locationX>
+        <locationX>0</locationX>
         <locationY>0</locationY>
         <connector>
             <targetReference>Get_Email_Verification_Info</targetReference>
@@ -201,10 +424,39 @@
     </start>
     <status>Active</status>
     <variables>
+        <description>Increased each time the user clicks &quot;Email Verified&quot; and is still unverified (including when there&apos;s no record)</description>
+        <name>attemptCount</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <scale>0</scale>
+        <value>
+            <numberValue>0.0</numberValue>
+        </value>
+    </variables>
+    <variables>
+        <name>LoginFlow_Community</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>LoginFlow_ForceLogout</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+        <value>
+            <booleanValue>false</booleanValue>
+        </value>
+    </variables>
+    <variables>
         <name>LoginFlow_UserId</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>
-        <isOutput>true</isOutput>
+        <isOutput>false</isOutput>
     </variables>
 </Flow>
