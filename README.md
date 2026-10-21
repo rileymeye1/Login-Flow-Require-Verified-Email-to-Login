@@ -15,18 +15,19 @@ verification reminders.
 | ---------------------------------------- | -------------------------------------------------------------------------------- |
 | `SendVerificationEmailAction`            | Invocable Apex wrapper around `System.UserManagement.sendAsyncEmailConfirmation` |
 | `SendVerificationEmailActionTest`        | Tests for the action                                                             |
-| `Email_Verification_Required_Login_Flow` | The Login Flow (Screen Flow, runs in system mode without sharing)                |
+| `Email_Verification_Required_Login_Flow` | The Login Flow (Screen Flow, runs in system mode without sharing; see Gotcha 10) |
 | `Manage_Multi_Factor_Logins`             | Permission set the **deploying** user needs (see Setup)                          |
 
 ## Setup
 
-1. Deploy the permission set: `sf project deploy start -d force-app/main/default/permissionsets`
+1. Deploy the permission set:
+   `sf project deploy start -o <org alias> -m PermissionSet:Manage_Multi_Factor_Logins`
 2. Assign it to the user who will deploy the flow:
-   `sf org assign permset -n Manage_Multi_Factor_Logins`
+   `sf org assign permset -o <org alias> -n Manage_Multi_Factor_Logins`
    Without it the flow deploy fails with
    `The field "UserId" for the object "TwoFactorMethodsInfo" doesn't exist.`
-3. Deploy the Apex classes and the flow:
-   `sf project deploy start -d force-app/main/default/classes -d force-app/main/default/flows`
+3. Deploy the Apex classes and the flow, running the action's tests:
+   `sf project deploy start -o <org alias> -l RunSpecifiedTests -t SendVerificationEmailActionTest -m ApexClass:SendVerificationEmailAction ApexClass:SendVerificationEmailActionTest Flow:Email_Verification_Required_Login_Flow`
 4. In Setup > Identity > Login Flows, add a Login Flow per profile (internal and/or site profiles)
    pointing at `Email_Verification_Required_Login_Flow`.
    - Leave **Render Flow in Lightning Runtime** unchecked. See [Gotchas](#gotchas-read-before-changing-anything).
@@ -102,6 +103,13 @@ Each of these was hit while building this. The flow looks the way it does on pur
    (labelled "Manage MFA in API"), which depends on `ManageUsers`, which pulls in the other 15
    permissions. Removing any of them makes the deploy fail. The flow itself runs in system mode, so
    end users do not need this permission set.
+10. **The flow must run in System Mode without Sharing.** The user logging in is the running user,
+    and ordinary users, including every site user, do not have `ManageTwoFactor`, so they cannot
+    read `TwoFactorMethodsInfo`. In user mode both lookups would fail for them, and every login
+    would either error or be treated as unverified. System mode without sharing lets the flow read
+    the record for any user without granting that admin-level permission set to anyone. Do not
+    switch the flow to user context, and do not hand out `Manage_Multi_Factor_Logins` as a
+    workaround.
 
 ## Testing
 
