@@ -52,10 +52,10 @@ CI as normal.
 
 ## How it works
 
-1. Look up the user's `TwoFactorMethodsInfo` record. If `HasUserVerifiedEmailAddress` is true, the flow
-   ends and the user logs in.
+1. Look up the `TwoFactorMethodsInfo` record for `$User.Id`, the user logging in. If
+   `HasUserVerifiedEmailAddress` is true, the flow ends and the user logs in.
 2. Otherwise send a verification email through `SendVerificationEmailAction`, passing
-   `LoginFlow_UserId` and `LoginFlow_Community`.
+   `$User.Id` and `LoginFlow_Community`.
 3. A decision on `LoginFlow_Community` (blank = internal, set = site) picks the internal or the
    community screen. The community wording does not mention Salesforce.
 4. When the user clicks **Email Verified**, look the record up again. If verified, the flow ends and
@@ -69,7 +69,6 @@ CI as normal.
 
 | Variable                | Direction        | Value seen in testing                                                        |
 | ----------------------- | ---------------- | ---------------------------------------------------------------------------- |
-| `LoginFlow_UserId`      | Input            | The logging-in user's Id                                                     |
 | `LoginFlow_Community`   | Input            | Site base URL, e.g. `https://example.my.site.com`. Blank for internal logins |
 | `LoginFlow_ForceLogout` | Output (Boolean) | Set to `true` to log the user out                                            |
 
@@ -123,6 +122,13 @@ Each of these was hit while building this. The flow looks the way it does on pur
     the record for any user without granting that admin-level permission set to anyone. Do not
     switch the flow to user context, and do not hand out `Manage_Multi_Factor_Logins` as a
     workaround.
+11. **Identify the user with `$User.Id`, not `LoginFlow_UserId`.** A Login Flow is still a screen
+    flow that can be started directly by URL, and a caller can set any input variable, including
+    `LoginFlow_UserId`. Combined with system mode, that would let them read another user's
+    verification status and send them emails (Code Analyzer flags it as
+    `PreventPassingUserDataIntoElementWithoutSharing`). `$User.Id` is always the running user, which
+    during a login is the person logging in, and cannot be set from outside. It is the 15-character
+    Id; that makes no difference to the lookups or the Apex input.
 
 ## Testing
 

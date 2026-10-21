@@ -21,7 +21,8 @@
         <inputParameters>
             <name>userId</name>
             <value>
-                <elementReference>LoginFlow_UserId</elementReference>
+                <elementReference>$User.Id</elementReference>
+                <inputConfiguratorMode>Resource</inputConfiguratorMode>
             </value>
         </inputParameters>
         <nameSegment>SendVerificationEmailAction</nameSegment>
@@ -244,7 +245,7 @@
             <field>UserId</field>
             <operator>EqualTo</operator>
             <value>
-                <elementReference>LoginFlow_UserId</elementReference>
+                <elementReference>$User.Id</elementReference>
             </value>
         </filters>
         <getFirstRecordOnly>true</getFirstRecordOnly>
@@ -266,7 +267,7 @@
             <field>UserId</field>
             <operator>EqualTo</operator>
             <value>
-                <elementReference>LoginFlow_UserId</elementReference>
+                <elementReference>$User.Id</elementReference>
             </value>
         </filters>
         <getFirstRecordOnly>true</getFirstRecordOnly>
@@ -451,12 +452,5 @@
         <value>
             <booleanValue>false</booleanValue>
         </value>
-    </variables>
-    <variables>
-        <name>LoginFlow_UserId</name>
-        <dataType>String</dataType>
-        <isCollection>false</isCollection>
-        <isInput>true</isInput>
-        <isOutput>false</isOutput>
     </variables>
 </Flow>
