@@ -147,8 +147,6 @@ Expected behavior:
 | **Resend Email** checked, then **Email Verified**  | A new email arrives; the screen shows again   |
 | **Email Verified** 3 times without clicking a link | Logout message; **Log Out** logs the user out |
 
-Not yet tested end to end: the logout for internal (non-site) logins.
-
 ## Troubleshooting
 
 | Symptom                                                                          | Cause / fix                                                                 |
